@@ -1,0 +1,65 @@
+import serial
+import re
+import pandas as pd 
+import datetime
+
+rate=10;
+
+filename='C:/Users/mcuenperez/Downloads/data.txt' #needs to be modified depending on location
+data_file = open(filename, "a")
+
+SERIAL_SPEED = 9600
+COM_PORT = 'COM5'
+ser = serial.Serial()
+ser.port = COM_PORT
+ser.baudrate = SERIAL_SPEED
+
+try:
+    ser.open()
+    if ser.isOpen():
+        print("Port" + ser.port + "opened successfully")
+except Exception as e:
+    print(e)
+        
+import tkinter as tk    
+window = tk.Tk()
+window.geometry("500x200")
+
+def hide_label():
+    lbl_alarm.place_forget()
+
+def close_application():
+    global data_file
+    data_file.close()
+    data_file=pd.read_csv("data.txt", delimiter=',')
+    data_file.to_csv('data.csv')
+    window.destroy()
+
+btn_quit = tk.Button(master=window, text="Quit", font=50, command=close_application)
+btn_quit.place(x=230, y=140)
+
+
+def get_alarm():
+    message = ser.readline()
+    data_string = message.decode("utf-8")
+    lbl_message = tk.Label(master=window, font=50)
+    lbl_message.place(x=230, y=80)
+    lbl_message["text"] = data_string;
+    if int(data_string) < 300:
+        global lbl_alarm
+        lbl_alarm=tk.Label(master=window, text="Alarm went off", font=50)
+        lbl_alarm.place(x=200, y=20)
+        window.after(3000, hide_label)
+    data_file=open(filename, "a")
+    if data_string:
+        current_time = datetime.datetime.now()
+        timestamp = current_time.strftime("%Y/%m/%d - %H:%M:%S")
+        if int(data_string)<100:
+            data_file.write(f"{timestamp}, {data_string}\n")
+
+    window.after(rate, get_alarm)
+    
+
+
+window.after(rate, get_alarm)
+window.mainloop()
